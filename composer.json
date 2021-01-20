@@ -1,0 +1,19 @@
+{
+  "name": "prestashop/arbpg",
+  "description": "Al-Rajhi Bank Payment Gateway Integration",
+  "homepage": "https://www.alrajhibank.com.sa/",
+  "license": "AFL-3.0",
+  "authors": [
+    {
+      "name": "Wjl",
+      "email": "info@wjl.sa"
+    }
+  ],
+  "require": {
+    "php": ">=5.4"
+  },
+  "config": {
+    "preferred-install": "dist"
+  },
+  "type": "prestashop-module"
+}
