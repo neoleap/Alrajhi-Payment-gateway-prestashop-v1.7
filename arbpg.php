@@ -34,11 +34,13 @@ if (!defined('_PS_VERSION_')) {
 
 class Arbpg extends PaymentModule
 {
+
     const ARB_HOSTED_ENDPOINT_TEST = 'https://securepayments.alrajhibank.com.sa/pg/payment/hosted.htm';
     const ARB_HOSTED_ENDPOINT_LIVE = 'https://digitalpayments.alrajhibank.com.sa/pg/payment/hosted.htm';
 
     const ARB_PAYMENT_ENDPOINT_TEST = 'https://securepayments.alrajhibank.com.sa/pg/paymentpage.htm?PaymentID=';
     const ARB_PAYMENT_ENDPOINT_LIVE = 'https://digitalpayments.alrajhibank.com.sa/pg/paymentpage.htm?PaymentID=';
+
 
     protected $_html = '';
     protected $_postErrors = array();
@@ -55,11 +57,13 @@ class Arbpg extends PaymentModule
     private $paymentId;
     private $mode;
 
+
     public function __construct()
     {
         $this->name = 'arbpg';
         $this->tab = 'payments_gateways';
         $this->version = '1.0.3';
+
         $this->ps_versions_compliancy = array('min' => '1.7', 'max' => _PS_VERSION_);
         $this->author = 'Al-Rajhi | Wjl';
         $this->controllers = array('validation');
@@ -305,6 +309,7 @@ class Arbpg extends PaymentModule
         $curl = curl_init();
 
         curl_setopt_array($curl, array(
+            
             CURLOPT_URL => $endpoint,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
