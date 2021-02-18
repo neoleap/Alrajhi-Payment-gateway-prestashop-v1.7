@@ -3,6 +3,8 @@
 
 class ArbpgResultModuleFrontController extends ModuleFrontController
 {
+    const ARB_SUCCESS_STATUS = 'CAPTURED';
+
     /**
      * @see FrontController::postProcess()
      */
@@ -45,7 +47,7 @@ class ArbpgResultModuleFrontController extends ModuleFrontController
         $currency = $this->context->currency;
         $total = (float)$cart->getOrderTotal(true, Cart::BOTH);
 
-        if ($paymentStatus && $paymentStatus === "CAPTURED") {
+        if ($paymentStatus && $paymentStatus === self::ARB_SUCCESS_STATUS) {
             $this->module->validateOrder($cart->id, Configuration::get('PS_OS_PAYMENT'), $total, $this->module->displayName, NULL, NULL, (int)$currency->id, false, $customer->secure_key);
             Tools::redirect('index.php?controller=order-confirmation&id_cart=' . $cart->id . '&id_module=' . $this->module->id . '&id_order=' . $this->module->currentOrder . '&key=' . $customer->secure_key);
         } else {

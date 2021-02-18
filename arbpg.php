@@ -34,8 +34,11 @@ if (!defined('_PS_VERSION_')) {
 
 class Arbpg extends PaymentModule
 {
-    const ARB_HOSTED_ENDPOINT = 'https://securepayments.alrajhibank.com.sa/pg/payment/hosted.htm';
-    const ARB_PAYMENT_ENDPOINT = 'https://securepayments.alrajhibank.com.sa/pg/paymentpage.htm?PaymentID=';
+    const ARB_HOSTED_ENDPOINT_TEST = 'https://securepayments.alrajhibank.com.sa/pg/payment/hosted.htm';
+    const ARB_HOSTED_ENDPOINT_LIVE = 'https://digitalpayments.alrajhibank.com.sa/pg/payment/hosted.htm';
+
+    const ARB_PAYMENT_ENDPOINT_TEST = 'https://securepayments.alrajhibank.com.sa/pg/paymentpage.htm?PaymentID=';
+    const ARB_PAYMENT_ENDPOINT_LIVE = 'https://digitalpayments.alrajhibank.com.sa/pg/paymentpage.htm?PaymentID=';
 
     protected $_html = '';
     protected $_postErrors = array();
@@ -50,12 +53,13 @@ class Arbpg extends PaymentModule
     private $transportalPassword;
     private $resourceKey;
     private $paymentId;
+    private $mode;
 
     public function __construct()
     {
         $this->name = 'arbpg';
         $this->tab = 'payments_gateways';
-        $this->version = '1.0.1';
+        $this->version = '1.0.3';
         $this->ps_versions_compliancy = array('min' => '1.7', 'max' => _PS_VERSION_);
         $this->author = 'Al-Rajhi | Wjl';
         $this->controllers = array('validation');
@@ -78,6 +82,9 @@ class Arbpg extends PaymentModule
         $this->transportalId = Configuration::get('ARB_TRANSPORTAL_ID');
         $this->transportalPassword = Configuration::get('ARB_TRANSPORTAL_PASSWORD');
         $this->resourceKey = Configuration::get('ARB_TERMINAL_RESOURCE_KEY');
+        $this->mode = Configuration::get('ARB_MODE');
+
+        // TODO : change this as it gets id on changing settings
         $this->paymentId = $this->getPaymentId();
     }
 
@@ -86,6 +93,7 @@ class Arbpg extends PaymentModule
         Configuration::set('ARB_TRANSPORTAL_ID', "");
         Configuration::set('ARB_TRANSPORTAL_PASSWORD', "");
         Configuration::set('ARB_TERMINAL_RESOURCE_KEY', "");
+        Configuration::set('ARB_MODE', 0);
         Configuration::set('ARB_TRACK_COUNTER', 100000);
     }
 
@@ -132,13 +140,14 @@ class Arbpg extends PaymentModule
 
     public function getExternalPaymentOption()
     {
+        $action = $this->mode ? self::ARB_PAYMENT_ENDPOINT_LIVE : self::ARB_PAYMENT_ENDPOINT_TEST;
 
         $externalOption = new PaymentOption();
         $externalOption
             ->setCallToActionText($this->l('Credit Card'))
             ->setAdditionalInformation($this->context->smarty->fetch('module:arbpg/views/templates/front/payment_infos.tpl'))
 //            ->setLogo(Media::getMediaPath(_PS_MODULE_DIR_ . $this->name . '/arb-payment.png'))
-            ->setAction(self::ARB_PAYMENT_ENDPOINT . $this->paymentId);
+            ->setAction($action . $this->paymentId);
 
         return $externalOption;
     }
@@ -154,6 +163,7 @@ class Arbpg extends PaymentModule
             $id = strval(Tools::getValue('ARB_TRANSPORTAL_ID'));
             $password = strval(Tools::getValue('ARB_TRANSPORTAL_PASSWORD'));
             $resourceKey = strval(Tools::getValue('ARB_TERMINAL_RESOURCE_KEY'));
+            $mode = strval(Tools::getValue('ARB_MODE'));
 
             if (
                 !$id ||
@@ -171,6 +181,7 @@ class Arbpg extends PaymentModule
                 Configuration::updateValue('ARB_TRANSPORTAL_ID', $id);
                 Configuration::updateValue('ARB_TRANSPORTAL_PASSWORD', $password);
                 Configuration::updateValue('ARB_TERMINAL_RESOURCE_KEY', $resourceKey);
+                Configuration::updateValue('ARB_MODE', $mode);
                 $output .= $this->displayConfirmation($this->l('Settings updated'));
             }
         }
@@ -209,6 +220,27 @@ class Arbpg extends PaymentModule
                     'name' => 'ARB_TERMINAL_RESOURCE_KEY',
                     'size' => 32,
                     'required' => true
+                ],
+                [
+                    'type' => 'radio',
+                    'class' => 't',
+                    'label' => $this->l('Mode'),
+                    'name' => 'ARB_MODE',
+                    'size' => 32,
+                    'required' => true,
+                    'is_bool' => true,
+                    'values' => array(
+                        array(
+                            'id' => 'test',
+                            'value' => 0,
+                            'label' => $this->l('Test')
+                        ),
+                        array(
+                            'id' => 'production',
+                            'value' => 1,
+                            'label' => $this->l('Production')
+                        )
+                    ),
                 ],
             ],
             'submit' => [
@@ -250,12 +282,14 @@ class Arbpg extends PaymentModule
         $helper->fields_value['ARB_TRANSPORTAL_ID'] = Configuration::get('ARB_TRANSPORTAL_ID');
         $helper->fields_value['ARB_TRANSPORTAL_PASSWORD'] = Configuration::get('ARB_TRANSPORTAL_PASSWORD');
         $helper->fields_value['ARB_TERMINAL_RESOURCE_KEY'] = Configuration::get('ARB_TERMINAL_RESOURCE_KEY');
+        $helper->fields_value['ARB_MODE'] = Configuration::get('ARB_MODE');
 
         return $helper->generateForm($fieldsForm);
     }
 
     private function getPaymentId()
     {
+        $endpoint = $this->mode ? self::ARB_HOSTED_ENDPOINT_LIVE : self::ARB_HOSTED_ENDPOINT_TEST;
         $plainData = $this->getRequestData();
         $wrappedData = $this->wrapData($plainData);
 
@@ -271,7 +305,7 @@ class Arbpg extends PaymentModule
         $curl = curl_init();
 
         curl_setopt_array($curl, array(
-            CURLOPT_URL => self::ARB_HOSTED_ENDPOINT,
+            CURLOPT_URL => $endpoint,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
             CURLOPT_MAXREDIRS => 10,
@@ -285,7 +319,6 @@ class Arbpg extends PaymentModule
                 'Accept: application/json',
                 'Accept-Language: application/json',
                 'Content-Type: application/json',
-                'Cookie: BIGipServer~UAT-DMZ~rpyuatiwb-IN-https.app~rpyuatiwb-IN-https_pool=rd10o00000000000000000000ffffac1500e3o9999; JSESSIONID=V2zwlYnff4FJdDgFfeOmZOxHQbavnaFqs6sDy76AZIU8M3nasO3L!-1975904906'
             ),
         ));
 
@@ -299,7 +332,8 @@ class Arbpg extends PaymentModule
             $id = explode(":", $data["result"])[0];
             return $id;
         } else {
-            // handle error either refresh on contact merchant
+            // TODO: remove this - for debug only
+            // dump(json_decode($response, true)[0]["errorText"]);
             return -1;
         }
     }
@@ -358,7 +392,8 @@ class Arbpg extends PaymentModule
             "errorURL" => $this->resultUrl,
             "responseURL" => $this->resultUrl,
             "trackId" => $trackId,
-            "amt" => $total
+            "amt" => $total,
+//            "udf1" => $this->context->language->id
         ];
 
 //        Configuration::updateValue('ARB_TRACK_COUNTER', (int)Configuration::get('ARB_TRACK_COUNTER') + 1);
